@@ -12,8 +12,8 @@ from ignite.contrib.handlers import tensorboard_logger as tb_logger
 
 import torchvision.utils as vutils
 
-import gym
-import gym.spaces
+import gymnasium as gym
+import gymnasium.spaces
 
 import numpy as np
 
@@ -39,6 +39,7 @@ class InputWrapper(gym.ObservationWrapper):
     1. resize image into predefined size
     2. move color channel axis to a first place
     """
+
     def __init__(self, *args):
         super(InputWrapper, self).__init__(*args)
         assert isinstance(self.observation_space, gym.spaces.Box)
@@ -115,12 +116,12 @@ class Generator(nn.Module):
 
 
 def iterate_batches(envs, batch_size=BATCH_SIZE):
-    batch = [e.reset() for e in envs]
+    batch = [e.reset()[0] for e in envs]
     env_gen = iter(lambda: random.choice(envs), None)
 
     while True:
         e = next(env_gen)
-        obs, reward, is_done, _ = e.step(e.action_space.sample())
+        obs, reward, terminated, truncated, _ = e.step(e.action_space.sample())
         if np.mean(obs) > 0.01:
             batch.append(obs)
         if len(batch) == batch_size:
@@ -128,25 +129,29 @@ def iterate_batches(envs, batch_size=BATCH_SIZE):
             batch_np = np.array(batch, dtype=np.float32) * 2.0 / 255.0 - 1.0
             yield torch.tensor(batch_np)
             batch.clear()
-        if is_done:
+        if terminated or truncated:
             e.reset()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--cuda", default=False, action='store_true', help="Enable cuda computation")
+    parser.add_argument("--cuda", default=False,
+                        action='store_true', help="Enable cuda computation")
     args = parser.parse_args()
 
     device = torch.device("cuda" if args.cuda else "cpu")
-    envs = [InputWrapper(gym.make(name)) for name in ('Breakout-v0', 'AirRaid-v0', 'Pong-v0')]
+    envs = [InputWrapper(gym.make(name))
+            for name in ('Breakout-v0', 'AirRaid-v0', 'Pong-v0')]
     input_shape = envs[0].observation_space.shape
 
     net_discr = Discriminator(input_shape=input_shape).to(device)
     net_gener = Generator(output_shape=input_shape).to(device)
 
     objective = nn.BCELoss()
-    gen_optimizer = optim.Adam(params=net_gener.parameters(), lr=LEARNING_RATE, betas=(0.5, 0.999))
-    dis_optimizer = optim.Adam(params=net_discr.parameters(), lr=LEARNING_RATE, betas=(0.5, 0.999))
+    gen_optimizer = optim.Adam(
+        params=net_gener.parameters(), lr=LEARNING_RATE, betas=(0.5, 0.999))
+    dis_optimizer = optim.Adam(
+        params=net_discr.parameters(), lr=LEARNING_RATE, betas=(0.5, 0.999))
 
     true_labels_v = torch.ones(BATCH_SIZE, device=device)
     fake_labels_v = torch.zeros(BATCH_SIZE, device=device)
@@ -164,7 +169,7 @@ if __name__ == "__main__":
         dis_output_true_v = net_discr(batch_v)
         dis_output_fake_v = net_discr(gen_output_v.detach())
         dis_loss = objective(dis_output_true_v, true_labels_v) + \
-                   objective(dis_output_fake_v, fake_labels_v)
+            objective(dis_output_fake_v, fake_labels_v)
         dis_loss.backward()
         dis_optimizer.step()
 
@@ -196,7 +201,7 @@ if __name__ == "__main__":
         attach(engine, "avg_loss_dis")
 
     handler = tb_logger.OutputHandler(tag="train",
-        metric_names=['avg_loss_gen', 'avg_loss_dis'])
+                                      metric_names=['avg_loss_gen', 'avg_loss_dis'])
     tb.attach(engine, log_handler=handler,
               event_name=Events.ITERATION_COMPLETED)
 
