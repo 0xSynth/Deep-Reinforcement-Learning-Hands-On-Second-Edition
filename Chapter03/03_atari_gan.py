@@ -6,12 +6,12 @@ import cv2
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 import torchvision.utils as vutils
 
-import gym
-import gym.spaces
+import gymnasium as gym
+import gymnasium.spaces
 
 import numpy as np
 
@@ -116,20 +116,22 @@ class Generator(nn.Module):
 
 
 def iterate_batches(envs, batch_size=BATCH_SIZE):
-    batch = [e.reset() for e in envs]
+    # reset returns initial observation and info dictionary, we only need observation - accessing it with [0]
+    batch = [e.reset()[0] for e in envs]
     env_gen = iter(lambda: random.choice(envs), None)
 
     while True:
         e = next(env_gen)
-        obs, reward, is_done, _ = e.step(e.action_space.sample())
+        obs, reward, terminated, truncated, _ = e.step(e.action_space.sample())
         if np.mean(obs) > 0.01:
             batch.append(obs)
         if len(batch) == batch_size:
+
             # Normalising input between -1 to 1
             batch_np = np.array(batch, dtype=np.float32) * 2.0 / 255.0 - 1.0
             yield torch.tensor(batch_np)
             batch.clear()
-        if is_done:
+        if terminated or truncated:
             e.reset()
 
 
@@ -143,7 +145,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if args.cuda else "cpu")
     envs = [
         InputWrapper(gym.make(name))
-        for name in ('Breakout-v0', 'AirRaid-v0', 'Pong-v0')
+        for name in ('Breakout-v4', 'AirRaid-v4', 'Pong-v4')
     ]
     input_shape = envs[0].observation_space.shape
 
