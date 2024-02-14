@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-import gym
+import gymnasium as gym 
 from collections import namedtuple
 import numpy as np
-from tensorboardX import SummaryWriter
+
+from torch.utils.tensorboard import SummaryWriter
 
 import torch
 import torch.nn as nn
@@ -35,23 +36,23 @@ def iterate_batches(env, net, batch_size):
     batch = []
     episode_reward = 0.0
     episode_steps = []
-    obs = env.reset()
+    obs, _ = env.reset()
     sm = nn.Softmax(dim=1)
     while True:
         obs_v = torch.FloatTensor([obs])
         act_probs_v = sm(net(obs_v))
         act_probs = act_probs_v.data.numpy()[0]
         action = np.random.choice(len(act_probs), p=act_probs)
-        next_obs, reward, is_done, _ = env.step(action)
+        next_obs, reward, terminated, truncated, _ = env.step(action)
         episode_reward += reward
         step = EpisodeStep(observation=obs, action=action)
         episode_steps.append(step)
-        if is_done:
+        if terminated or truncated:
             e = Episode(reward=episode_reward, steps=episode_steps)
             batch.append(e)
             episode_reward = 0.0
             episode_steps = []
-            next_obs = env.reset()
+            next_obs, _ = env.reset()
             if len(batch) == batch_size:
                 yield batch
                 batch = []
