@@ -36,7 +36,7 @@ if __name__ == "__main__":
     state = torch.load(args.model, map_location=lambda stg, _: stg)
     net.load_state_dict(state)
 
-    state = env.reset()
+    state, _ = env.reset()
     total_reward = 0.0
     c = collections.Counter()
 
@@ -48,7 +48,8 @@ if __name__ == "__main__":
         q_vals = net(state_v).data.numpy()[0]
         action = np.argmax(q_vals)
         c[action] += 1
-        state, reward, done, _ = env.step(action)
+        state, reward, terminated, truncated, _ = env.step(action)
+        done = terminated or truncated
         total_reward += reward
         if done:
             break
@@ -60,4 +61,3 @@ if __name__ == "__main__":
     print("Action counts:", c)
     if args.record:
         env.env.close()
-

@@ -50,9 +50,9 @@ class ExperienceBuffer:
         states, actions, rewards, dones, next_states = \
             zip(*[self.buffer[idx] for idx in indices])
         return np.array(states), np.array(actions), \
-               np.array(rewards, dtype=np.float32), \
-               np.array(dones, dtype=np.uint8), \
-               np.array(next_states)
+            np.array(rewards, dtype=np.float32), \
+            np.array(dones, dtype=np.uint8), \
+            np.array(next_states)
 
 
 class Agent:
@@ -62,7 +62,7 @@ class Agent:
         self._reset()
 
     def _reset(self):
-        self.state = env.reset()
+        self.state, _ = env.reset()
         self.total_reward = 0.0
 
     @torch.no_grad()
@@ -79,9 +79,9 @@ class Agent:
             action = int(act_v.item())
 
         # do step in the environment
-        new_state, reward, is_done, _ = self.env.step(action)
+        new_state, reward, terminated, truncated, _ = self.env.step(action)
         self.total_reward += reward
-
+        is_done = terminated or truncated
         exp = Experience(self.state, action, reward,
                          is_done, new_state)
         self.exp_buffer.append(exp)
@@ -111,7 +111,7 @@ def calc_loss(batch, net, tgt_net, device="cpu"):
         next_state_values = next_state_values.detach()
 
     expected_state_action_values = next_state_values * GAMMA + \
-                                   rewards_v
+        rewards_v
     return nn.MSELoss()(state_action_values,
                         expected_state_action_values)
 
@@ -160,9 +160,9 @@ if __name__ == "__main__":
             m_reward = np.mean(total_rewards[-100:])
             print("%d: done %d games, reward %.3f, "
                   "eps %.2f, speed %.2f f/s" % (
-                frame_idx, len(total_rewards), m_reward, epsilon,
-                speed
-            ))
+                      frame_idx, len(total_rewards), m_reward, epsilon,
+                      speed
+                  ))
             writer.add_scalar("epsilon", epsilon, frame_idx)
             writer.add_scalar("speed", speed, frame_idx)
             writer.add_scalar("reward_100", m_reward, frame_idx)
