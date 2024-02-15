@@ -18,22 +18,23 @@ class ToyEnv(gym.Env):
 
     def reset(self):
         self.step_index = 0
-        return self.step_index
+        return self.step_index, {}
 
     def step(self, action):
         is_done = self.step_index == 10
         if is_done:
             return self.step_index % self.observation_space.n, \
-                   0.0, is_done, {}
+                0.0, is_done, False, {}
         self.step_index += 1
         return self.step_index % self.observation_space.n, \
-               float(action), self.step_index == 10, {}
+            float(action), self.step_index == 10, False, {}
 
 
 class DullAgent(ptan.agent.BaseAgent):
     """
     Agent always returns the fixed action
     """
+
     def __init__(self, action: int):
         self.action = action
 
@@ -46,8 +47,10 @@ class DullAgent(ptan.agent.BaseAgent):
 if __name__ == "__main__":
     env = ToyEnv()
     agent = DullAgent(action=1)
-    exp_source = ptan.experience.ExperienceSourceFirstLast(env, agent, gamma=1.0, steps_count=1)
-    buffer = ptan.experience.ExperienceReplayBuffer(exp_source, buffer_size=100)
+    exp_source = ptan.experience.ExperienceSourceFirstLast(
+        env, agent, gamma=1.0, steps_count=1)
+    buffer = ptan.experience.ExperienceReplayBuffer(
+        exp_source, buffer_size=100)
 
     for step in range(6):
         buffer.populate(1)

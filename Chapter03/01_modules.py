@@ -1,8 +1,8 @@
 import torch
+from torch import Tensor
 import torch.nn as nn
-
 class OurModule(nn.Module):
-    def __init__(self, num_inputs, num_classes, dropout_prob=0.3):
+    def __init__(self, num_inputs: int, num_classes: int, dropout_prob: float = 0.3):
         super(OurModule, self).__init__()
         self.pipe = nn.Sequential(
             nn.Linear(num_inputs, 5),
@@ -14,7 +14,7 @@ class OurModule(nn.Module):
             nn.Softmax(dim=1)
         )
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         return self.pipe(x)
 
 if __name__ == "__main__":

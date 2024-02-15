@@ -18,22 +18,23 @@ class ToyEnv(gym.Env):
 
     def reset(self):
         self.step_index = 0
-        return self.step_index
+        return self.step_index, {}
 
     def step(self, action):
         is_done = self.step_index == 10
         if is_done:
             return self.step_index % self.observation_space.n, \
-                   0.0, is_done, {}
+                0.0, is_done, False, {}
         self.step_index += 1
         return self.step_index % self.observation_space.n, \
-               float(action), self.step_index == 10, {}
+            float(action), self.step_index == 10, False, {}
 
 
 class DullAgent(ptan.agent.BaseAgent):
     """
     Agent always returns the fixed action
     """
+
     def __init__(self, action: int):
         self.action = action
 
@@ -45,11 +46,11 @@ class DullAgent(ptan.agent.BaseAgent):
 
 if __name__ == "__main__":
     env = ToyEnv()
-    s = env.reset()
+    s, _ = env.reset()
     print("env.reset() -> %s" % s)
-    s = env.step(1)
+    s, _ = env.step(1)
     print("env.step(1) -> %s" % str(s))
-    s = env.step(2)
+    s, _ = env.step(2)
     print("env.step(2) -> %s" % str(s))
 
     for _ in range(10):
@@ -61,23 +62,27 @@ if __name__ == "__main__":
 
     env = ToyEnv()
     agent = DullAgent(action=1)
-    exp_source = ptan.experience.ExperienceSource(env=env, agent=agent, steps_count=2)
+    exp_source = ptan.experience.ExperienceSource(
+        env=env, agent=agent, steps_count=2)
     for idx, exp in enumerate(exp_source):
         if idx > 15:
             break
         print(exp)
 
-    exp_source = ptan.experience.ExperienceSource(env=env, agent=agent, steps_count=4)
+    exp_source = ptan.experience.ExperienceSource(
+        env=env, agent=agent, steps_count=4)
     print(next(iter(exp_source)))
 
-    exp_source = ptan.experience.ExperienceSource(env=[ToyEnv(), ToyEnv()], agent=agent, steps_count=2)
+    exp_source = ptan.experience.ExperienceSource(
+        env=[ToyEnv(), ToyEnv()], agent=agent, steps_count=2)
     for idx, exp in enumerate(exp_source):
         if idx > 4:
             break
         print(exp)
 
     print("ExperienceSourceFirstLast")
-    exp_source = ptan.experience.ExperienceSourceFirstLast(env, agent, gamma=1.0, steps_count=1)
+    exp_source = ptan.experience.ExperienceSourceFirstLast(
+        env, agent, gamma=1.0, steps_count=1)
     for idx, exp in enumerate(exp_source):
         print(exp)
         if idx > 10:

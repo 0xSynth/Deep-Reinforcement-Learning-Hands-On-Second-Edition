@@ -183,7 +183,7 @@ class StocksEnv(gym.Env):
         else:
             offset = bars
         self._state.reset(prices, offset)
-        return self._state.encode()
+        return self._state.encode(), {}
 
     def step(self, action_idx):
         action = Actions(action_idx)
@@ -193,7 +193,7 @@ class StocksEnv(gym.Env):
             "instrument": self._instrument,
             "offset": self._state._offset
         }
-        return obs, reward, done, info
+        return obs, reward, done, False, info
 
     def render(self, mode='human', close=False):
         pass
