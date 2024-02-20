@@ -5,7 +5,7 @@ if __name__ == "__main__":
 
     total_reward = 0.0
     total_steps = 0
-    obs = env.reset()
+    obs, _ = env.reset()
 
     while True:
         action = env.action_space.sample()
